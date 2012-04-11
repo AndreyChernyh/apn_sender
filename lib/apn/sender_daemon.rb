@@ -12,10 +12,10 @@ module APN
   # Based off delayed_job's great example, except we can be much lighter by not loading the entire
   # Rails environment.  To use in a Rails app, <code>script/generate apn_sender</code>.
   class SenderDaemon
-    
+
     def initialize(args)
       @options = {:worker_count => 1, :environment => :development, :delay => 5}
-      
+
       optparse = OptionParser.new do |opts|
         opts.banner = "Usage: #{File.basename($0)} [options] start|stop|restart|run"
 
@@ -47,25 +47,38 @@ module APN
         opts.on('-d', '--delay=D', "Delay between rounds of work (seconds)") do |d|
           @options[:delay] = d
         end
+        opts.on('-i', '--index=i', "Start or stop worker with a specific index") do |d|
+          @options[:index] = d
+        end
       end
-      
+
       # If no arguments, give help screen
       @args = optparse.parse!(args.empty? ? ['-h'] : args)
       @options[:verbose] = true if @options[:very_verbose]
     end
-  
+
     def daemonize
-      @options[:worker_count].times do |worker_index|
-        process_name = @options[:worker_count] == 1 ? "apn_sender" : "apn_sender.#{worker_index}"
-        Daemons.run_proc(process_name, :dir => "#{::RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
-          run process_name
+      if @options[:index]
+        # only start worker with a specific index
+        process_name = "apn_sender.#{@options[:index]}"
+        run_daemons(process_name)
+      else
+        @options[:worker_count].times do |worker_index|
+          process_name = @options[:worker_count] == 1 ? "apn_sender" : "apn_sender.#{worker_index}"
+          run_daemons(process_name)
         end
       end
     end
-    
+
+    def run_daemons(process_name)
+      Daemons.run_proc(process_name, :dir => "#{::RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
+        run process_name
+      end
+    end
+
     def run(worker_name = nil)
       logger = Logger.new(File.join(::RAILS_ROOT, 'log', 'apn_sender.log'))
-      
+
       worker = APN::Sender.new(@options)
       worker.logger = logger
       worker.verbose = @options[:verbose]
@@ -76,6 +89,6 @@ module APN
       logger.fatal(e) if logger && logger.respond_to?(:fatal)
       exit 1
     end
-    
+
   end
 end

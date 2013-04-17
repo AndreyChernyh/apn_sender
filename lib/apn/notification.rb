@@ -41,6 +41,10 @@ module APN
       false
     end
     
+    def outdated?
+      options[:send_before] && Time.parse(options[:send_before]) < Time.now
+    end
+
     protected
 
     # Completed encoded notification, ready to send down the wire to Apple

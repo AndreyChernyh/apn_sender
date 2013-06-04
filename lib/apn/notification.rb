@@ -25,7 +25,8 @@ module APN
     
     attr_accessor :options, :token
     def initialize(token, opts)
-      @options = hash_as_symbols(opts.is_a?(Hash) ? opts : {:alert => opts})
+      @send_before = Hash[:send_before]
+      @options = hash_as_symbols(opts.is_a?(Hash.except(:send_before)) ? opts : {:alert => opts})
       @token = token
 
       raise "The maximum size allowed for a notification payload is 256 bytes." if packaged_notification.size.to_i > 256
@@ -42,7 +43,7 @@ module APN
     end
     
     def outdated?
-      options[:send_before] && Time.parse(options[:send_before]) < Time.now
+      @send_before && Time.parse(@send_before) < Time.now
     end
 
     protected

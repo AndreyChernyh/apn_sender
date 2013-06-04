@@ -25,7 +25,7 @@ module APN
     
     attr_accessor :options, :token
     def initialize(token, opts)
-      @send_before = opts[:send_before]
+      @send_before = opts.is_a?(Hash) ? opts[:send_before] : false
       @options = hash_as_symbols(opts.is_a?(Hash) ? opts.except(:send_before) : {:alert => opts})
       @token = token
 
